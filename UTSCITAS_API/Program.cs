@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using UTSCitas_API.Services;
 using UTSCITAS_API.Services.Interfaces;
+using UTSCITAS_API; // Para ApplicationDbContext
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -68,6 +69,9 @@ app.UseCors("DefaultCorsPolicy");
 app.UseAuthorization();
 
 app.MapRazorPages();
+
+// Mapear endpoints de controllers API para Swagger
+app.MapControllers();
 
 app.MapControllerRoute(
     name: "default",

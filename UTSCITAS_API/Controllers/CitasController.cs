@@ -3,9 +3,11 @@ using UTSCITAS_API.Models;
 using UTSCITAS_API.Services.Interfaces;
 
 
-namespace UTSCitas_API.Controllers
+namespace UTSCITAS_API.Controllers
 {
-    public class CitasController : Controller
+    [ApiController]
+    [Route("api/[controller]")]
+    public class CitasController : ControllerBase
     {
         private readonly ICitaService _citaService;
 
@@ -14,8 +16,8 @@ namespace UTSCitas_API.Controllers
             _citaService = citaService;
         }
 
-        [HttpPost]
-        public async Task<IActionResult> Crear(Cita cita)
+        [HttpPost("crear")]
+        public async Task<IActionResult> Crear([FromBody] Cita cita)
         {
             bool creada = await _citaService.CrearCita(cita);
 

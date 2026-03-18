@@ -4,7 +4,9 @@ using UTSCITAS_API.Models;
 
 namespace UTSCITAS_API.Controllers
 {
-    public class UsuariosController : Controller
+    [ApiController]
+    [Route("api/[controller]")]
+    public class UsuariosController : ControllerBase
     {
         private readonly IUsuarioService _usuarioService;
 
@@ -13,8 +15,8 @@ namespace UTSCITAS_API.Controllers
             _usuarioService = usuarioService;
         }
 
-        [HttpPost]
-        public async Task<IActionResult> Crear(Usuario usuario)
+        [HttpPost("crear")]
+        public async Task<IActionResult> Crear([FromBody] Usuario usuario)
         {
             await _usuarioService.CrearUsuario(usuario);
             return Ok();

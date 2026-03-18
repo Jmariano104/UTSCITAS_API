@@ -1,9 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using UTSCITAS_API.Services.Interfaces;
 
-namespace UTSCitas_API.Controllers
+namespace UTSCITAS_API.Controllers
 {
-    public class ProfesionalesController : Controller
+    [ApiController]
+    [Route("api/[controller]")]
+    public class ProfesionalesController : ControllerBase
     {
         private readonly IProfesionalService _profService;
 
@@ -12,7 +14,7 @@ namespace UTSCitas_API.Controllers
             _profService = profService;
         }
 
-        [HttpGet]
+        [HttpGet("obtener")]
         public async Task<IActionResult> Obtener()
         {
             var lista = await _profService.ObtenerProfesionales();
