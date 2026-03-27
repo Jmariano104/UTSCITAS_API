@@ -12,6 +12,8 @@
 
         public string TipoCita { get; set; }
 
-        public string Estado { get; set; }
+        // En la base de datos la tabla Citas referencia a EstadosCita mediante IdEstado (int).
+        // Usar IdEstado aquí para mantener consistencia con la BD y las FK.
+        public int IdEstado { get; set; }
     }
 }
