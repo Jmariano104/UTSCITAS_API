@@ -1,45 +1,54 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using UTSCITAS_API.Services.Interfaces;
-using UTSCITAS_API.Models;
-using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Mvc;
+using UTSCITAS_API.Services;
+using UTSCITAS_API.DTOs;
+namespace UTSCITAS_API.Controllers;
 
-namespace UTSCITAS_API.Controllers
+[ApiController]
+[Route("api/[controller]")]
+public class UsuariosController : ControllerBase
 {
-    public class UsuariosController : Controller
+    private readonly UsuarioService _service;
+
+    public UsuariosController(UsuarioService service) => _service = service;
+
+    // GET api/usuarios
+    [HttpGet]
+    public async Task<IActionResult> Listar()
     {
-        private readonly IUsuarioService _usuarioService;
-        private readonly ILogger<UsuariosController> _logger;
+        var data = await _service.ListarAsync();
+        return Ok(data);
+    }
 
-        public UsuariosController(IUsuarioService usuarioService, ILogger<UsuariosController> logger)
-        {
-            _usuarioService = usuarioService;
-            _logger = logger;
-        }
+    // GET api/usuarios/5
+    [HttpGet("{id}")]
+    public async Task<IActionResult> Buscar(int id)
+    {
+        var usuario = await _service.BuscarPorIdAsync(id);
+        if (usuario is null) return NotFound(new { mensaje = "Usuario no encontrado." });
+        return Ok(usuario);
+    }
 
-        [HttpPost]
-        public async Task<IActionResult> Crear(Usuario usuario)
-        {
-            if (usuario == null)
-                return BadRequest("Usuario no puede ser nulo");
+    // POST api/usuarios/crear
+    [HttpPost("Crear")]
+    public async Task<IActionResult> Insertar([FromBody] UsuarioDto dto)
+    {
+        var nuevoId = await _service.InsertarAsync(dto);
+        return CreatedAtAction(nameof(Buscar), new { id = nuevoId }, new { id = nuevoId });
+    }
 
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+    // PUT api/usuarios/5
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Actualizar(int id, [FromBody] UsuarioDto dto)
+    {
+        await _service.ActualizarAsync(id, dto);
+        return NoContent();
+    }
 
-            try
-            {
-                await _usuarioService.CrearUsuario(usuario);
-                return Ok();
-            }
-            catch (ArgumentException aex)
-            {
-                _logger.LogWarning(aex, "Validación inválida al crear usuario");
-                return BadRequest(aex.Message);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error creando usuario");
-                return StatusCode(500, "Ocurrió un error al crear el usuario");
-            }
-        }
+    // DELETE api/usuarios/5
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Eliminar(int id)
+    {
+        await _service.EliminarAsync(id);
+        return NoContent();
     }
 }

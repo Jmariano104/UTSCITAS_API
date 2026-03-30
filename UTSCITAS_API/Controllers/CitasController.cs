@@ -1,46 +1,85 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using UTSCITAS_API.Models;
-using UTSCITAS_API.Services.Interfaces;
-using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Mvc;
+using UTSCITAS_API.Services;
+using UTSCITAS_API.DTOs;
 
-namespace UTSCitas_API.Controllers
+namespace UTSCITAS_API.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class CitasController : ControllerBase
 {
-    public class CitasController : Controller
+    private readonly CitaService _service;
+    private readonly CalendarificService _calendarific;
+
+    public CitasController(CitaService service, CalendarificService calendarific)
     {
-        private readonly ICitaService _citaService;
-        private readonly ILogger<CitasController> _logger;
+        _service = service;
+        _calendarific = calendarific;
+    }
 
-        public CitasController(ICitaService citaService, ILogger<CitasController> logger)
-        {
-            _citaService = citaService;
-            _logger = logger;
-        }
+    // GET api/citas
+    [HttpGet]
+    public async Task<IActionResult> Listar()
+        => Ok(await _service.ListarAsync());
 
-        [HttpPost]
-        public async Task<IActionResult> Crear(Cita cita)
-        {
-            if (cita == null)
-                return BadRequest("Cita no puede ser nula");
+    // GET api/citas/5
+    [HttpGet("{id}")]
+    public async Task<IActionResult> Buscar(int id)
+    {
+        var cita = await _service.BuscarPorIdAsync(id);
+        if (cita is null) return NotFound(new { mensaje = "Cita no encontrada." });
+        return Ok(cita);
+    }
 
-            try
-            {
-                bool creada = await _citaService.CrearCita(cita);
+    // GET api/citas/usuario/3
+    [HttpGet("usuario/{idUsuario}")]
+    public async Task<IActionResult> PorUsuario(int idUsuario)
+        => Ok(await _service.PorUsuarioAsync(idUsuario));
 
-                if (!creada)
-                    return BadRequest("No se puede crear cita en día festivo");
+    // GET api/citas/profesional/2
+    [HttpGet("profesional/{idProfesional}")]
+    public async Task<IActionResult> PorProfesional(int idProfesional)
+        => Ok(await _service.PorProfesionalAsync(idProfesional));
 
-                return Ok();
-            }
-            catch (ArgumentException aex)
-            {
-                _logger.LogWarning(aex, "Validación inválida al crear cita");
-                return BadRequest(aex.Message);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error creando cita");
-                return StatusCode(500, "Ocurrió un error al crear la cita");
-            }
-        }
+    // GET api/citas/fecha?inicio=2026-01-01&fin=2026-12-31
+    [HttpGet("fecha")]
+    public async Task<IActionResult> PorFecha([FromQuery] DateOnly inicio, [FromQuery] DateOnly fin)
+        => Ok(await _service.PorFechaAsync(inicio, fin));
+
+    // POST api/citas
+    // Valida que la fecha no sea feriado en México antes de crear
+    [HttpPost]
+    public async Task<IActionResult> Insertar([FromBody] CitaDto dto)
+    {
+        var esFeriado = await _calendarific.EsFeriadoAsync("MX", dto.Fecha);
+        if (esFeriado)
+            return BadRequest(new { mensaje = "No se pueden agendar citas en días feriados." });
+
+        var nuevoId = await _service.InsertarAsync(dto);
+        return CreatedAtAction(nameof(Buscar), new { id = nuevoId }, new { id = nuevoId });
+    }
+
+    // PUT api/citas/5
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Actualizar(int id, [FromBody] ActualizarCitaDto dto)
+    {
+        await _service.ActualizarAsync(id, dto);
+        return NoContent();
+    }
+
+    // PATCH api/citas/5/estado
+    [HttpPatch("{id}/estado")]
+    public async Task<IActionResult> CambiarEstado(int id, [FromBody] CambiarEstadoDto dto)
+    {
+        await _service.CambiarEstadoAsync(id, dto.IdEstado);
+        return NoContent();
+    }
+
+    // DELETE api/citas/5
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Eliminar(int id)
+    {
+        await _service.EliminarAsync(id);
+        return NoContent();
     }
 }

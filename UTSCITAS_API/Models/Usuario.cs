@@ -1,13 +1,10 @@
-﻿namespace UTSCITAS_API.Models
+namespace UTSCITAS_API.Models;
+
+public class Usuario
 {
-    public class Usuario
-    {
-        public int IdUsuario { get; set; }
-
-        public string Nombre { get; set; }
-
-        public string Correo { get; set; }
-
-        public string Password { get; set; }
-    }
+    public int IdUsuario { get; set; }
+    public string Nombre { get; set; } = string.Empty;
+    public string Correo { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
+    public string Matricula { get; set; } = string.Empty;
 }

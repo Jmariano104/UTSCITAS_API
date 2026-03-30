@@ -1,60 +1,89 @@
-﻿using Microsoft.Data.SqlClient;
-using System.Data;
-using System.Data.SqlClient;
+using Dapper;
+using Microsoft.Data.SqlClient;
 using UTSCITAS_API.Models;
-using UTSCITAS_API.Services.Interfaces;
-using Microsoft.Extensions.Logging;
+using UTSCITAS_API.DTOs;
 
-namespace UTSCitas_API.Services
+namespace UTSCITAS_API.Services;
+
+public class CitaService
 {
-    public class CitaService : ICitaService
+    private readonly string _connectionString;
+
+    public CitaService(IConfiguration config)
     {
-        private readonly string _connection;
-        private readonly IHolidayService _holidayService;
-        private readonly ILogger<CitaService> _logger;
+        _connectionString = config.GetConnectionString("DefaultConnection")!;
+    }
 
-        public CitaService(IConfiguration config, IHolidayService holidayService, ILogger<CitaService> logger)
-        {
-            _connection = config.GetConnectionString("DefaultConnection");
-            _holidayService = holidayService;
-            _logger = logger;
-        }
+    private SqlConnection GetConnection() => new SqlConnection(_connectionString);
 
-        public async Task<bool> CrearCita(Cita cita)
-        {
-            if (cita == null) throw new ArgumentNullException(nameof(cita));
+    public async Task<IEnumerable<Cita>> ListarAsync()
+    {
+        using var conn = GetConnection();
+        return await conn.QueryAsync<Cita>("sp_ListarCitas",
+            commandType: System.Data.CommandType.StoredProcedure);
+    }
 
-            bool esFestivo = await _holidayService.EsDiaFestivo(cita.Fecha);
+    public async Task<Cita?> BuscarPorIdAsync(int id)
+    {
+        using var conn = GetConnection();
+        return await conn.QueryFirstOrDefaultAsync<Cita>("sp_BuscarCitaPorId",
+            new { IdCita = id },
+            commandType: System.Data.CommandType.StoredProcedure);
+    }
 
-            if (esFestivo)
-                return false;
+    public async Task<IEnumerable<Cita>> PorUsuarioAsync(int idUsuario)
+    {
+        using var conn = GetConnection();
+        return await conn.QueryAsync<Cita>("sp_CitasPorUsuario",
+            new { IdUsuario = idUsuario },
+            commandType: System.Data.CommandType.StoredProcedure);
+    }
 
-            try
-            {
-                using (SqlConnection conn = new SqlConnection(_connection))
-                {
-                    using (SqlCommand cmd = new SqlCommand("sp_InsertCita", conn))
-                    {
-                        cmd.CommandType = CommandType.StoredProcedure;
+    public async Task<IEnumerable<Cita>> PorProfesionalAsync(int idProfesional)
+    {
+        using var conn = GetConnection();
+        return await conn.QueryAsync<Cita>("sp_CitasPorProfesional",
+            new { IdProfesional = idProfesional },
+            commandType: System.Data.CommandType.StoredProcedure);
+    }
 
-                        cmd.Parameters.Add(new SqlParameter("@IdUsuario", SqlDbType.Int) { Value = cita.IdUsuario });
-                        cmd.Parameters.Add(new SqlParameter("@IdProfesional", SqlDbType.Int) { Value = cita.IdProfesional });
-                        cmd.Parameters.Add(new SqlParameter("@Fecha", SqlDbType.DateTime) { Value = cita.Fecha });
-                        cmd.Parameters.Add(new SqlParameter("@TipoCita", SqlDbType.NVarChar, 100) { Value = cita.TipoCita });
-                        cmd.Parameters.Add(new SqlParameter("@IdEstado", SqlDbType.Int) { Value = cita.IdEstado });
+    public async Task<IEnumerable<Cita>> PorFechaAsync(DateOnly inicio, DateOnly fin)
+    {
+        using var conn = GetConnection();
+        return await conn.QueryAsync<Cita>("sp_CitasPorFecha",
+            new { FechaInicio = inicio, FechaFin = fin },
+            commandType: System.Data.CommandType.StoredProcedure);
+    }
 
-                        await conn.OpenAsync();
-                        await cmd.ExecuteNonQueryAsync();
-                    }
-                }
+    public async Task<int> InsertarAsync(CitaDto dto)
+    {
+        using var conn = GetConnection();
+        return await conn.ExecuteScalarAsync<int>("sp_InsertarCita",
+            new { dto.IdUsuario, dto.IdProfesional, dto.Fecha, dto.TipoCita, dto.IdEstado },
+            commandType: System.Data.CommandType.StoredProcedure);
+    }
 
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al crear la cita para Usuario {User} Profesional {Prof} Fecha {Fecha}", cita.IdUsuario, cita.IdProfesional, cita.Fecha);
-                throw;
-            }
-        }
+    public async Task ActualizarAsync(int id, ActualizarCitaDto dto)
+    {
+        using var conn = GetConnection();
+        await conn.ExecuteAsync("sp_ActualizarCita",
+            new { IdCita = id, dto.IdProfesional, dto.Fecha, dto.TipoCita, dto.IdEstado },
+            commandType: System.Data.CommandType.StoredProcedure);
+    }
+
+    public async Task CambiarEstadoAsync(int id, int idEstado)
+    {
+        using var conn = GetConnection();
+        await conn.ExecuteAsync("sp_CambiarEstadoCita",
+            new { IdCita = id, IdEstado = idEstado },
+            commandType: System.Data.CommandType.StoredProcedure);
+    }
+
+    public async Task EliminarAsync(int id)
+    {
+        using var conn = GetConnection();
+        await conn.ExecuteAsync("sp_EliminarCita",
+            new { IdCita = id },
+            commandType: System.Data.CommandType.StoredProcedure);
     }
 }

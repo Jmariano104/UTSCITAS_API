@@ -1,54 +1,57 @@
-﻿using Microsoft.Data.SqlClient;
-using System.Data.SqlClient;
-using Microsoft.Extensions.Logging;
+using Dapper;
+using Microsoft.Data.SqlClient;
 using UTSCITAS_API.Models;
-using UTSCITAS_API.Services.Interfaces;
+using UTSCITAS_API.DTOs;
 
-namespace UTSCitas_API.Services
+namespace UTSCITAS_API.Services;
+
+public class ProfesionalService
 {
-    public class ProfesionalService : IProfesionalService
+    private readonly string _connectionString;
+
+    public ProfesionalService(IConfiguration config)
     {
-        private readonly string _connection;
-        private readonly ILogger<ProfesionalService> _logger;
+        _connectionString = config.GetConnectionString("DefaultConnection")!;
+    }
 
-        public ProfesionalService(IConfiguration config, ILogger<ProfesionalService> logger)
-        {
-            _connection = config.GetConnectionString("DefaultConnection");
-            _logger = logger;
-        }
+    private SqlConnection GetConnection() => new SqlConnection(_connectionString);
 
-        public async Task<List<Profesional>> ObtenerProfesionales()
-        {
-            List<Profesional> lista = new List<Profesional>();
+    public async Task<IEnumerable<Profesional>> ListarAsync()
+    {
+        using var conn = GetConnection();
+        return await conn.QueryAsync<Profesional>("sp_ListarProfesionales",
+            commandType: System.Data.CommandType.StoredProcedure);
+    }
 
-            using (SqlConnection conn = new SqlConnection(_connection))
-            {
-                try
-                {
-                    SqlCommand cmd = new SqlCommand("SELECT IdProfesional, Nombre, Especialidad FROM Profesionales", conn);
+    public async Task<Profesional?> BuscarPorIdAsync(int id)
+    {
+        using var conn = GetConnection();
+        return await conn.QueryFirstOrDefaultAsync<Profesional>("sp_BuscarProfesionalPorId",
+            new { IdProfesional = id },
+            commandType: System.Data.CommandType.StoredProcedure);
+    }
 
-                    await conn.OpenAsync();
+    public async Task<int> InsertarAsync(ProfesionalDto dto)
+    {
+        using var conn = GetConnection();
+        return await conn.ExecuteScalarAsync<int>("sp_InsertarProfesional",
+            new { dto.Nombre, dto.Especialidad },
+            commandType: System.Data.CommandType.StoredProcedure);
+    }
 
-                    SqlDataReader reader = await cmd.ExecuteReaderAsync();
+    public async Task ActualizarAsync(int id, ProfesionalDto dto)
+    {
+        using var conn = GetConnection();
+        await conn.ExecuteAsync("sp_ActualizarProfesional",
+            new { IdProfesional = id, dto.Nombre, dto.Especialidad },
+            commandType: System.Data.CommandType.StoredProcedure);
+    }
 
-                    while (reader.Read())
-                    {
-                        lista.Add(new Profesional
-                        {
-                            IdProfesional = reader.GetInt32(0),
-                            Nombre = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
-                            Especialidad = reader.IsDBNull(2) ? string.Empty : reader.GetString(2)
-                        });
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error obteniendo profesionales");
-                    throw;
-                }
-            }
-
-            return lista;
-        }
+    public async Task EliminarAsync(int id)
+    {
+        using var conn = GetConnection();
+        await conn.ExecuteAsync("sp_EliminarProfesional",
+            new { IdProfesional = id },
+            commandType: System.Data.CommandType.StoredProcedure);
     }
 }
