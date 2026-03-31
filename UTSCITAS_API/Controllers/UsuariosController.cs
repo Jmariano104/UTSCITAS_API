@@ -30,10 +30,21 @@ public class UsuariosController : ControllerBase
 
     // POST api/usuarios/crear
     [HttpPost("Crear")]
-    public async Task<IActionResult> Insertar([FromBody] UsuarioDto dto)
+    public async Task<IActionResult> Crear([FromBody] UsuarioDto dto)
     {
-        var nuevoId = await _service.InsertarAsync(dto);
-        return CreatedAtAction(nameof(Buscar), new { id = nuevoId }, new { id = nuevoId });
+        try
+        {
+            int v = await _service.InsertarAsync(dto);
+            return Ok(v);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new
+            {
+                mensaje = ex.Message,
+                detalle = ex.InnerException?.Message
+            });
+        }
     }
 
     // PUT api/usuarios/5

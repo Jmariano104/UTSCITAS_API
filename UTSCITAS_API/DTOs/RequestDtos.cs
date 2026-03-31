@@ -1,16 +1,31 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace UTSCITAS_API.DTOs;
 
 public class UsuarioDto
 {
+
+    [Required]
     public string Nombre { get; set; } = string.Empty;
+
+    [Required]
+    [EmailAddress]
+    [MaxLength(254)]
     public string Correo { get; set; } = string.Empty;
+
+    [Required]
+    [MinLength(8)]
     public string Password { get; set; } = string.Empty;
+    [Required]
     public string Matricula { get; set; } = string.Empty;
 }
 
 public class ProfesionalDto
 {
+    [Required]
     public string Nombre { get; set; } = string.Empty;
+
+    [Required]
     public string Especialidad { get; set; } = string.Empty;
 }
 

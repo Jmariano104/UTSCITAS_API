@@ -20,66 +20,141 @@ public class CitasController : ControllerBase
     // GET api/citas
     [HttpGet]
     public async Task<IActionResult> Listar()
-        => Ok(await _service.ListarAsync());
+    {
+        try
+        {
+            return Ok(await _service.ListarAsync());
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { mensaje = "Error interno del servidor." });
+        }
+    }
 
     // GET api/citas/5
     [HttpGet("{id}")]
     public async Task<IActionResult> Buscar(int id)
     {
-        var cita = await _service.BuscarPorIdAsync(id);
-        if (cita is null) return NotFound(new { mensaje = "Cita no encontrada." });
-        return Ok(cita);
+        try
+        {
+            var cita = await _service.BuscarPorIdAsync(id);
+            if (cita is null) return NotFound(new { mensaje = "Cita no encontrada." });
+            return Ok(cita);
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { mensaje = "Error interno del servidor." });
+        }
     }
 
     // GET api/citas/usuario/3
     [HttpGet("usuario/{idUsuario}")]
     public async Task<IActionResult> PorUsuario(int idUsuario)
-        => Ok(await _service.PorUsuarioAsync(idUsuario));
+    {
+        try
+        {
+            return Ok(await _service.PorUsuarioAsync(idUsuario));
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { mensaje = "Error interno del servidor." });
+        }
+    }
 
     // GET api/citas/profesional/2
     [HttpGet("profesional/{idProfesional}")]
     public async Task<IActionResult> PorProfesional(int idProfesional)
-        => Ok(await _service.PorProfesionalAsync(idProfesional));
+    {
+        try
+        {
+            return Ok(await _service.PorProfesionalAsync(idProfesional));
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { mensaje = "Error interno del servidor." });
+        }
+    }
 
     // GET api/citas/fecha?inicio=2026-01-01&fin=2026-12-31
     [HttpGet("fecha")]
     public async Task<IActionResult> PorFecha([FromQuery] DateOnly inicio, [FromQuery] DateOnly fin)
-        => Ok(await _service.PorFechaAsync(inicio, fin));
+    {
+        try
+        {
+            return Ok(await _service.PorFechaAsync(inicio, fin));
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { mensaje = "Error interno del servidor." });
+        }
+    }
 
     // POST api/citas
     // Valida que la fecha no sea feriado en México antes de crear
     [HttpPost]
     public async Task<IActionResult> Insertar([FromBody] CitaDto dto)
     {
-        var esFeriado = await _calendarific.EsFeriadoAsync("MX", dto.Fecha);
-        if (esFeriado)
-            return BadRequest(new { mensaje = "No se pueden agendar citas en días feriados." });
+        if (!ModelState.IsValid) return BadRequest(ModelState);
 
-        var nuevoId = await _service.InsertarAsync(dto);
-        return CreatedAtAction(nameof(Buscar), new { id = nuevoId }, new { id = nuevoId });
+        try
+        {
+            var esFeriado = await _calendarific.EsFeriadoAsync("MX", dto.Fecha);
+            if (esFeriado)
+                return BadRequest(new { mensaje = "No se pueden agendar citas en días feriados." });
+
+            var nuevoId = await _service.InsertarAsync(dto);
+            return CreatedAtAction(nameof(Buscar), new { id = nuevoId }, new { id = nuevoId });
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { mensaje = "Error interno del servidor." });
+        }
     }
 
     // PUT api/citas/5
     [HttpPut("{id}")]
     public async Task<IActionResult> Actualizar(int id, [FromBody] ActualizarCitaDto dto)
     {
-        await _service.ActualizarAsync(id, dto);
-        return NoContent();
+        if (!ModelState.IsValid) return BadRequest(ModelState);
+
+        try
+        {
+            await _service.ActualizarAsync(id, dto);
+            return NoContent();
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { mensaje = "Error interno del servidor." });
+        }
     }
 
     // PATCH api/citas/5/estado
     [HttpPatch("{id}/estado")]
     public async Task<IActionResult> CambiarEstado(int id, [FromBody] CambiarEstadoDto dto)
     {
-        await _service.CambiarEstadoAsync(id, dto.IdEstado);
-        return NoContent();
+        try
+        {
+            await _service.CambiarEstadoAsync(id, dto.IdEstado);
+            return NoContent();
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { mensaje = "Error interno del servidor." });
+        }
     }
 
     // DELETE api/citas/5
     [HttpDelete("{id}")]
     public async Task<IActionResult> Eliminar(int id)
     {
-        await _service.EliminarAsync(id);
-        return NoContent();
+        try
+        {
+            await _service.EliminarAsync(id);
+            return NoContent();
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { mensaje = "Error interno del servidor." });
+        }
     }
 }
