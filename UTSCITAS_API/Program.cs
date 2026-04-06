@@ -1,14 +1,24 @@
-using UTSCitas_API.Services;
-using UTSCITAS_API.Services.Interfaces;
+using UTSCITAS_API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddScoped<IUsuarioService, UsuarioService>();
-builder.Services.AddScoped<IProfesionalService, ProfesionalService>();
-builder.Services.AddScoped<ICitaService, CitaService>();
-builder.Services.AddScoped<IHolidayService, HolidayService>();
+// Register concrete Dapper-based services
+builder.Services.AddScoped<UsuarioService>();
+builder.Services.AddScoped<ProfesionalService>();
+builder.Services.AddScoped<CitaService>();
+builder.Services.AddScoped<CalendarificService>();
+
+// Register CalendarificService with IHttpClientFactory
+builder.Services.AddHttpClient<CalendarificService>(client =>
+{
+    var baseUrl = builder.Configuration["Calendarific:BaseUrl"] ?? "https://calendarific.com/api/v2";
+    client.BaseAddress = new Uri(baseUrl);
+});
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
 builder.Services.AddControllersWithViews();
+builder.Services.AddControllers();
 
 var app = builder.Build();
 
@@ -21,5 +31,7 @@ app.UseAuthorization();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.Run();

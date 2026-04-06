@@ -1,23 +1,65 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using UTSCITAS_API.Services.Interfaces;
-using UTSCITAS_API.Models;
+using Microsoft.AspNetCore.Mvc;
+using UTSCITAS_API.Services;
+using UTSCITAS_API.DTOs;
+namespace UTSCITAS_API.Controllers;
 
-namespace UTSCITAS_API.Controllers
+[ApiController]
+[Route("api/[controller]")]
+public class UsuariosController : ControllerBase
 {
-    public class UsuariosController : Controller
+    private readonly UsuarioService _service;
+
+    public UsuariosController(UsuarioService service) => _service = service;
+
+    // GET api/usuarios
+    [HttpGet]
+    public async Task<IActionResult> Listar()
     {
-        private readonly IUsuarioService _usuarioService;
+        var data = await _service.ListarAsync();
+        return Ok(data);
+    }
 
-        public UsuariosController(IUsuarioService usuarioService)
-        {
-            _usuarioService = usuarioService;
-        }
+    // GET api/usuarios/5
+    [HttpGet("{id}")]
+    public async Task<IActionResult> Buscar(int id)
+    {
+        var usuario = await _service.BuscarPorIdAsync(id);
+        if (usuario is null) return NotFound(new { mensaje = "Usuario no encontrado." });
+        return Ok(usuario);
+    }
 
-        [HttpPost]
-        public async Task<IActionResult> Crear(Usuario usuario)
+    // POST api/usuarios/crear
+    [HttpPost("Crear")]
+    public async Task<IActionResult> Crear([FromBody] UsuarioDto dto)
+    {
+        try
         {
-            await _usuarioService.CrearUsuario(usuario);
-            return Ok();
+            int v = await _service.InsertarAsync(dto);
+            return Ok(v);
         }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new
+            {
+                mensaje = ex.Message,
+                detalle = ex.InnerException?.Message
+            });
+        }
+    }
+
+    // PUT api/usuarios/5
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Actualizar(int id, [FromBody] UsuarioDto dto)
+    {
+        await _service.ActualizarAsync(id, dto);
+        return NoContent();
+    }
+
+    // DELETE api/usuarios/5
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Eliminar(int id)
+    {
+        await _service.EliminarAsync(id);
+        return NoContent();
     }
 }
