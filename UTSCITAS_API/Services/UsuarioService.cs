@@ -72,5 +72,23 @@ public class UsuarioService
             new { IdUsuario = id },
             commandType: CommandType.StoredProcedure);
     }
+
+    internal async Task<Usuario> BuscarPorCorreoAsync(object correo)
+    {
+        using var conn = GetConnection();
+        return await conn.QueryFirstOrDefaultAsync<Usuario>("sp_BuscarUsuarioPorCorreo",
+            new { Correo = correo },
+            commandType: CommandType.StoredProcedure);
+    }
+
+    internal async Task<bool> CompararLoginAsync(object passworddb, object passwordCompare)
+    {
+        var parts = passworddb.ToString()?.Split('.');
+        if (parts == null || parts.Length != 2) return false;
+        var salt = Convert.FromBase64String(parts[0]);
+        var hashStored = Convert.FromBase64String(parts[1]);
+        var hashCompare = Rfc2898DeriveBytes.Pbkdf2(Encoding.UTF8.GetBytes(passwordCompare.ToString()!), salt, 10000, HashAlgorithmName.SHA256, 32);
+        return CryptographicOperations.FixedTimeEquals(hashStored, hashCompare);
+    }
 }
 

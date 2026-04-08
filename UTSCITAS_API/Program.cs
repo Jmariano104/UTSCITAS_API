@@ -20,11 +20,25 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddControllersWithViews();
 builder.Services.AddControllers();
 
+// Configuración de CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAngular", policyBuilder =>
+    {
+        policyBuilder.WithOrigins("http://localhost:4200")
+                     .AllowAnyMethod()
+                     .AllowAnyHeader();
+    });
+});
+
 var app = builder.Build();
 
 app.UseHttpsRedirection();
 
 app.UseRouting();
+
+// Aplica la política CORS aquí
+app.UseCors("AllowAngular");
 
 app.UseAuthorization();
 

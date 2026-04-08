@@ -1,6 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
 using UTSCITAS_API.Services;
 using UTSCITAS_API.DTOs;
+using System.Security.Cryptography;
+using System.Text;
+using Microsoft.AspNetCore.Identity.Data;
+
 namespace UTSCITAS_API.Controllers;
 
 [ApiController]
@@ -61,5 +65,18 @@ public class UsuariosController : ControllerBase
     {
         await _service.EliminarAsync(id);
         return NoContent();
+    }
+
+    // POST api/usuarios/login
+    [HttpPost("Login")]
+    public async Task<IActionResult> Login([FromBody] LoginRequestDTO dto)
+    {
+        var usuario = await _service.BuscarPorCorreoAsync(dto.Email);
+        if (usuario is null) return Unauthorized(new { mensaje = "Correo o contraseña incorrectos." });
+        // Verificar contraseña
+        var isValid = await _service.CompararLoginAsync(usuario.Password, dto.Password);
+        if (!isValid) return Unauthorized(new { mensaje = "Correo o contraseña incorrectos." });
+
+        return Ok(new { mensaje = "Login exitoso.", usuario.IdUsuario, usuario.Nombre, usuario.Correo });
     }
 }
