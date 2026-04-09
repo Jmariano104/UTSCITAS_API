@@ -14,38 +14,50 @@ builder.Services.AddHttpClient<CalendarificService>(client =>
     var baseUrl = builder.Configuration["Calendarific:BaseUrl"] ?? "https://calendarific.com/api/v2";
     client.BaseAddress = new Uri(baseUrl);
 });
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddControllersWithViews();
+// Agregar logging
+builder.Services.AddLogging(config =>
+{
+    config.ClearProviders();
+    config.AddConsole();
+    config.AddDebug();
+});
+
+// Controllers con validación automática
 builder.Services.AddControllers();
 
-// Configuración de CORS
+// Configuración de CORS - MEJORADA
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAngular", policyBuilder =>
     {
-        policyBuilder.WithOrigins("http://localhost:4200")
+        policyBuilder.WithOrigins("http://localhost:4200", "http://localhost:4201")
                      .AllowAnyMethod()
-                     .AllowAnyHeader();
+                     .AllowAnyHeader()
+                     .AllowCredentials();
     });
 });
 
 var app = builder.Build();
 
-app.UseHttpsRedirection();
+// Middleware en orden correcto
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
+app.UseHttpsRedirection();
 app.UseRouting();
 
-// Aplica la política CORS aquí
+// CORS DEBE IR ANTES DE AUTH
 app.UseCors("AllowAngular");
 
 app.UseAuthorization();
 
-app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
-app.UseSwagger();
-app.UseSwaggerUI();
+app.MapControllers();
 
 app.Run();

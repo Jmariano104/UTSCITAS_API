@@ -7,4 +7,6 @@ public class Usuario
     public string Correo { get; set; } = string.Empty;
     public string Password { get; set; } = string.Empty;
     public string Matricula { get; set; } = string.Empty;
+    public string? Carrera { get; set; }
+    public DateTime? FechaRegistro { get; set; }
 }
