@@ -46,7 +46,7 @@ public class ProfesionalDto
 }
 
 // ── CITAS ──────────────────────────────────────────────
-// La tabla Citas tiene: IdCita, IdUsuario, IdProfesional, Fecha, TipoCita, Estado(NVARCHAR)
+// La tabla Citas tiene: IdCita, IdUsuario, IdProfesional, Fecha, TipoCita, Estado(NVARCHAR), Comentario
 public class CitaDto
 {
     [Required]
@@ -61,6 +61,9 @@ public class CitaDto
     [Required]
     [MaxLength(50)]
     public string TipoCita { get; set; } = string.Empty;
+
+    [MaxLength(500)]
+    public string? Comentario { get; set; }
 }
 
 public class ActualizarCitaDto
@@ -70,10 +73,20 @@ public class ActualizarCitaDto
     public DateTime Fecha { get; set; }
     public string TipoCita { get; set; } = string.Empty;
     public string Estado { get; set; } = "Pendiente";
+
+    [MaxLength(500)]
+    public string? Comentario { get; set; }
 }
 
 public class CambiarEstadoDto
 {
     [Required]
     public string Estado { get; set; } = string.Empty;
+}
+
+// ── Nuevo DTO para actualizar solo el comentario ────────
+public class ActualizarComentarioDto
+{
+    [MaxLength(500)]
+    public string? Comentario { get; set; }
 }

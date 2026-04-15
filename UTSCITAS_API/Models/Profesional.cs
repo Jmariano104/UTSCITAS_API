@@ -7,5 +7,6 @@ public class Profesional
     public string? Correo { get; set; }
     public string Especialidad { get; set; } = string.Empty;
     public string? HorarioDisponible { get; set; }
+    public string? Password { get; set; }
     public DateTime? FechaRegistro { get; set; }
 }

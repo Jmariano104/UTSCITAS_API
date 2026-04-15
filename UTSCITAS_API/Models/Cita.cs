@@ -9,4 +9,5 @@ public class Cita
     public string TipoCita { get; set; } = string.Empty;
     // La BD usa Estado como texto, NO IdEstado
     public string Estado { get; set; } = "Pendiente";
+    public string? Comentario { get; set; }
 }

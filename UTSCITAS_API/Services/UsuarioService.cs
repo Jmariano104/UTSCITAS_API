@@ -37,17 +37,11 @@ public class UsuarioService
     public async Task<int> InsertarAsync(UsuarioDto dto)
     {
         dto.Correo = dto.Correo?.Trim().ToLowerInvariant() ?? string.Empty;
-
-        // Hashear password con PBKDF2
-        var salt = RandomNumberGenerator.GetBytes(16);
-        var hash = Rfc2898DeriveBytes.Pbkdf2(
-            Encoding.UTF8.GetBytes(dto.Password), salt, 10000, HashAlgorithmName.SHA256, 32);
-        var passwordStored = Convert.ToBase64String(salt) + "." + Convert.ToBase64String(hash);
+        var passwordStored = HashPassword(dto.Password);
 
         using var conn = GetConnection();
         try
         {
-            // La BD tiene: Nombre, Correo, Matricula, Carrera, Password
             await conn.ExecuteAsync("sp_InsertarUsuario",
                 new {
                     Nombre    = dto.Nombre,
@@ -57,7 +51,7 @@ public class UsuarioService
                     Password  = passwordStored
                 },
                 commandType: CommandType.StoredProcedure);
-            return 1; // SP no retorna ID, regresamos 1 como éxito
+            return 1;
         }
         catch (SqlException ex) when (ex.Number == 2627 || ex.Number == 2601 || ex.Number == 50000)
         {
@@ -73,6 +67,25 @@ public class UsuarioService
             commandType: CommandType.StoredProcedure);
     }
 
+    // Actualizar solo nombre y carrera (perfil)
+    public async Task ActualizarPerfilAsync(int id, ActualizarPerfilUsuarioDto dto)
+    {
+        using var conn = GetConnection();
+        await conn.ExecuteAsync("sp_ActualizarPerfilUsuario",
+            new { IdUsuario = id, dto.Nombre, dto.Carrera },
+            commandType: CommandType.StoredProcedure);
+    }
+
+    // Cambiar contraseña
+    public async Task CambiarPasswordAsync(int id, string nuevaPassword)
+    {
+        var hash = HashPassword(nuevaPassword);
+        using var conn = GetConnection();
+        await conn.ExecuteAsync("sp_CambiarPasswordUsuario",
+            new { IdUsuario = id, Password = hash },
+            commandType: CommandType.StoredProcedure);
+    }
+
     public async Task EliminarAsync(int id)
     {
         using var conn = GetConnection();
@@ -81,7 +94,7 @@ public class UsuarioService
             commandType: CommandType.StoredProcedure);
     }
 
-    internal async Task<Usuario?> BuscarPorCorreoAsync(string correo)
+    public async Task<Usuario?> BuscarPorCorreoAsync(string correo)
     {
         using var conn = GetConnection();
         return await conn.QueryFirstOrDefaultAsync<Usuario>("sp_BuscarUsuarioPorCorreo",
@@ -89,7 +102,7 @@ public class UsuarioService
             commandType: CommandType.StoredProcedure);
     }
 
-    internal async Task<bool> CompararLoginAsync(string passwordDb, string passwordIngresado)
+    public async Task<bool> CompararLoginAsync(string passwordDb, string passwordIngresado)
     {
         var parts = passwordDb?.Split('.');
         if (parts == null || parts.Length != 2) return false;
@@ -98,5 +111,13 @@ public class UsuarioService
         var hashCompare = Rfc2898DeriveBytes.Pbkdf2(
             Encoding.UTF8.GetBytes(passwordIngresado), salt, 10000, HashAlgorithmName.SHA256, 32);
         return CryptographicOperations.FixedTimeEquals(hashStored, hashCompare);
+    }
+
+    private string HashPassword(string password)
+    {
+        var salt = RandomNumberGenerator.GetBytes(16);
+        var hash = Rfc2898DeriveBytes.Pbkdf2(
+            Encoding.UTF8.GetBytes(password), salt, 10000, HashAlgorithmName.SHA256, 32);
+        return Convert.ToBase64String(salt) + "." + Convert.ToBase64String(hash);
     }
 }

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using UTSCITAS_API.Services;
 using UTSCITAS_API.DTOs;
 
@@ -19,7 +20,6 @@ public class CitasController : ControllerBase
         _logger       = logger;
     }
 
-    // GET api/citas
     [HttpGet]
     public async Task<IActionResult> Listar()
     {
@@ -27,7 +27,6 @@ public class CitasController : ControllerBase
         catch (Exception) { return StatusCode(500, new { mensaje = "Error interno del servidor." }); }
     }
 
-    // GET api/citas/5
     [HttpGet("{id}")]
     public async Task<IActionResult> Buscar(int id)
     {
@@ -40,7 +39,6 @@ public class CitasController : ControllerBase
         catch (Exception) { return StatusCode(500, new { mensaje = "Error interno del servidor." }); }
     }
 
-    // GET api/citas/usuario/3
     [HttpGet("usuario/{idUsuario}")]
     public async Task<IActionResult> PorUsuario(int idUsuario)
     {
@@ -48,7 +46,6 @@ public class CitasController : ControllerBase
         catch (Exception) { return StatusCode(500, new { mensaje = "Error interno del servidor." }); }
     }
 
-    // GET api/citas/profesional/2
     [HttpGet("profesional/{idProfesional}")]
     public async Task<IActionResult> PorProfesional(int idProfesional)
     {
@@ -56,14 +53,13 @@ public class CitasController : ControllerBase
         catch (Exception) { return StatusCode(500, new { mensaje = "Error interno del servidor." }); }
     }
 
-    // POST api/citas
     [HttpPost]
     public async Task<IActionResult> Insertar([FromBody] CitaDto dto)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
         try
         {
-            // Verificar feriado — si Calendarific falla, se permite la cita igualmente
+            // Calendarific opcional — si falla se permite la cita
             try
             {
                 var esFeriado = await _calendarific.EsFeriadoAsync("MX", dto.Fecha);
@@ -72,21 +68,25 @@ public class CitasController : ControllerBase
             }
             catch (Exception ex)
             {
-                // API key inválida o sin conexión — se ignora y se permite la cita
-                _logger.LogWarning("Calendarific no disponible: {msg}. Se permite la cita.", ex.Message);
+                _logger.LogWarning("Calendarific no disponible: {msg}", ex.Message);
             }
 
             await _service.InsertarAsync(dto);
             return Ok(new { mensaje = "Cita agendada exitosamente." });
         }
+        catch (SqlException ex) when (ex.Class == 16)
+        {
+            // RAISERROR con severidad 16 = error de regla de negocio (validación)
+            _logger.LogWarning("Validación al insertar cita: {msg}", ex.Message);
+            return BadRequest(new { mensaje = ex.Message });
+        }
         catch (Exception ex)
         {
             _logger.LogError("Error al insertar cita: {msg}", ex.Message);
-            return StatusCode(500, new { mensaje = ex.Message });
+            return StatusCode(500, new { mensaje = "Error al agendar la cita. Inténtalo de nuevo." });
         }
     }
 
-    // PUT api/citas/5
     [HttpPut("{id}")]
     public async Task<IActionResult> Actualizar(int id, [FromBody] ActualizarCitaDto dto)
     {
@@ -95,7 +95,6 @@ public class CitasController : ControllerBase
         catch (Exception) { return StatusCode(500, new { mensaje = "Error interno del servidor." }); }
     }
 
-    // PATCH api/citas/5/estado
     [HttpPatch("{id}/estado")]
     public async Task<IActionResult> CambiarEstado(int id, [FromBody] CambiarEstadoDto dto)
     {
@@ -103,11 +102,27 @@ public class CitasController : ControllerBase
         catch (Exception) { return StatusCode(500, new { mensaje = "Error interno del servidor." }); }
     }
 
-    // DELETE api/citas/5
+    // PATCH api/citas/{id}/comentario — actualiza solo el comentario de la cita
+    [HttpPatch("{id}/comentario")]
+    public async Task<IActionResult> ActualizarComentario(int id, [FromBody] ActualizarComentarioDto dto)
+    {
+        try
+        {
+            await _service.ActualizarComentarioAsync(id, dto.Comentario);
+            return Ok(new { mensaje = "Comentario actualizado correctamente." });
+        }
+        catch (Exception) { return StatusCode(500, new { mensaje = "Error interno del servidor." }); }
+    }
+
+    // DELETE api/citas/{id} — el usuario puede cancelar/eliminar su propia cita
     [HttpDelete("{id}")]
     public async Task<IActionResult> Eliminar(int id)
     {
-        try { await _service.EliminarAsync(id); return NoContent(); }
+        try
+        {
+            await _service.EliminarAsync(id);
+            return Ok(new { mensaje = "Cita eliminada correctamente." });
+        }
         catch (Exception) { return StatusCode(500, new { mensaje = "Error interno del servidor." }); }
     }
 }
